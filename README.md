@@ -1,32 +1,32 @@
 # ms-telecontrol
 
-Service telecontrol berbasis Go clean architecture. Service ini menerima request command lewat HTTP, menyimpan state command, lalu mem-publish command ke MQTT memakai Eclipse Paho MQTT.
+A Go clean‑architecture based telecontrol service. This service receives command requests over HTTP, stores the command state, and publishes the command to MQTT using Eclipse Paho MQTT.
 
-## Struktur
+## Structure
 
 ```text
 .
-|-- cmd/api                                      # entry point aplikasi
-|-- internal/app                                 # wiring dependency dan bootstrap integration
-|-- internal/config                              # loader config/env
-|-- internal/delivery/http                       # HTTP handler dan router
-|-- internal/domain                              # entity, domain error, domain event
+|-- cmd/api                                      # application entry point
+|-- internal/app                                 # dependency wiring and bootstrap integration
+|-- internal/config                              # configuration/environment loader
+|-- internal/delivery/http                       # HTTP handlers and router
+|-- internal/domain                              # entities, domain errors, domain events
 |-- internal/usecase                             # business logic
-|-- internal/usecase/port                        # outbound port untuk external integration
-|-- internal/infrastructure/persistence          # adapter repository
-|-- internal/infrastructure/external/httpclient  # shared HTTP client untuk service-to-service
-|-- internal/infrastructure/external/service     # client/hook ke service lain
-`-- internal/infrastructure/external/messaging   # adapter messaging, termasuk MQTT
+|-- internal/usecase/port                        # outbound ports for external integrations
+|-- internal/infrastructure/persistence          # repository adapters
+|-- internal/infrastructure/external/httpclient  # shared HTTP client for service‑to‑service calls
+|-- internal/infrastructure/external/service     # client/hook for other services
+`-- internal/infrastructure/external/messaging   # messaging adapters, including MQTT
 ```
 
-## Endpoint
+## Endpoints
 
 - `GET /health`
 - `POST /telecontrol/commands`
 - `GET /telecontrol/commands`
 - `GET /telecontrol/commands/{id}`
 
-Contoh issue command:
+Example command request:
 
 ```bash
 curl --location 'http://localhost:8080/telecontrol/commands' \
@@ -43,11 +43,11 @@ curl --location 'http://localhost:8080/telecontrol/commands' \
   }'
 ```
 
-Response sukses memakai status HTTP `202 Accepted`. Command akan berada di status `published` jika publish MQTT berhasil, atau `failed` jika broker menolak publish.
+A successful response uses HTTP status `202 Accepted`. The command will be in `published` status if MQTT publishing succeeds, or `failed` if the broker rejects the publish.
 
 ## MQTT
 
-Aktifkan MQTT dengan env:
+Enable MQTT via environment variables:
 
 ```bash
 MQTT_ENABLED=true
@@ -57,22 +57,22 @@ MQTT_COMMAND_TOPIC_PATTERN=telecontrol/{device_id}/commands
 MQTT_QOS=1
 ```
 
-Placeholder topic yang tersedia:
+Available placeholder topics:
 
 - `{device_id}`
 - `{command}`
 - `{command_id}`
 
-Payload MQTT yang dipublish berisi event `TelecontrolCommandIssuedEvent`, termasuk `id`, `device_id`, `command`, `payload`, `correlation_id`, `requested_by`, dan timestamp command.
+The MQTT payload published contains a `TelecontrolCommandIssuedEvent` with fields `id`, `device_id`, `command`, `payload`, `correlation_id`, `requested_by`, and a command timestamp.
 
-## Integrasi Service Lain
+## Integration with Other Services
 
-Usecase hanya bergantung pada port di `internal/usecase/port`:
+The use‑case layer only depends on ports defined in `internal/usecase/port`:
 
-- `CommandPublisher` untuk publish command ke transport seperti MQTT.
-- `CommandIssuedHook` untuk integrasi setelah command berhasil dipublish.
+- `CommandPublisher` for publishing commands to transports such as MQTT.
+- `CommandIssuedHook` for integration after a command has been successfully published.
 
-Hook HTTP ke gateway telemetry dapat diaktifkan dengan:
+An HTTP hook to a telemetry gateway can be enabled with:
 
 ```bash
 GATEWAY_TELEMETRY_BASE_URL=http://localhost:9000
@@ -80,7 +80,7 @@ GATEWAY_TELEMETRY_COMMAND_PATH=/internal/telecontrol/commands
 GATEWAY_TELEMETRY_TIMEOUT=3s
 ```
 
-## Environment Variable
+## Environment Variables
 
 - `APP_NAME=ms-telecontrol`
 - `APP_PORT=8080`
@@ -99,29 +99,29 @@ GATEWAY_TELEMETRY_TIMEOUT=3s
 - `GATEWAY_TELEMETRY_COMMAND_PATH=/internal/telecontrol/commands`
 - `GATEWAY_TELEMETRY_TIMEOUT=3s`
 
-Jika `MQTT_ENABLED=false`, API tetap start, tetapi `POST /telecontrol/commands` akan mengembalikan `503` karena publisher belum dikonfigurasi.
+If `MQTT_ENABLED=false`, the API still starts, but `POST /telecontrol/commands` will return `503` because the publisher is not configured.
 
-## Menjalankan Project
+## Running the Project
 
 ```bash
 go run ./cmd/api
 ```
 
-Dengan MQTT lokal:
+With a local MQTT broker:
 
 ```bash
 MQTT_ENABLED=true go run ./cmd/api
 ```
 
-Di PowerShell:
+In PowerShell:
 
 ```powershell
 $env:MQTT_ENABLED="true"
 go run ./cmd/api
 ```
 
-## Catatan Arsitektur
+## Architectural Notes
 
-- Adapter MQTT berbasis Paho ada di `internal/infrastructure/external/messaging/mqtt`.
-- Flow publish langsung dari request cycle cocok untuk tahap awal. Untuk flow mission critical, pertimbangkan outbox pattern agar command tidak hilang saat broker atau jaringan bermasalah.
-- Repository saat ini masih memory. Layer persistence bisa diganti tanpa mengubah delivery HTTP atau usecase selama kontrak `TelecontrolCommandRepository` tetap dipenuhi.
+- The MQTT adapter based on Paho resides in `internal/infrastructure/external/messaging/mqtt`.
+- Direct publish from the request cycle is fine for an initial prototype. For mission‑critical flows, consider an outbox pattern to avoid command loss when the broker or network fails.
+- The current repository implementation is in‑memory. The persistence layer can be swapped without changing the HTTP delivery or use‑case layers as long as the `TelecontrolCommandRepository` contract remains satisfied.

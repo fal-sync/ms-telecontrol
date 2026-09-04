@@ -1,0 +1,29 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+
+# Output of the go coverage tool, when used
+*.out
+
+# Dependency directories (remove the comment if you use it)
+# vendor/
+
+# IDE/editor files
+.idea/
+*.iml
+.vscode/
+
+# Environment files
+.env
+
+# Go build artifacts
+bin/
+
+# Logs
+*.log
